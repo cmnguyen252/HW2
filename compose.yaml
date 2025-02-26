@@ -1,0 +1,44 @@
+services:
+  web1:
+    build:
+      dockerfile: ./web1/Dockerfile
+    ports:
+      - 80:80
+    volumes:
+      - ./web1:/var/www/html
+    networks:
+      - conn1
+    depends_on:
+      db:
+        condition: service_healthy        
+  db:
+    image: mariadb
+    restart: always
+    stdin_open: true
+    tty: true
+    secrets:
+      - db-password
+    volumes:
+      - db-data:/var/lib/mysql
+      - $PWD/script.sql:/docker-entrypoint-initdb.d/script.sql
+    environment:
+      - MARIADB_USER=test
+      - MARIADB_PASSWORD=test
+      - MARIADB_DATABASE=example
+      - MARIADB_ROOT_PASSWORD=/run/secrets/db-password
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    ports: 
+      - 3306:3306
+    networks:
+      - conn1
+volumes: 
+  db-data: 
+networks:
+  conn1:
+secrets:
+  db-password:
+    file: db/password.txt
